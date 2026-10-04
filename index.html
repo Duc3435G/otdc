@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trắc Nghiệm Kiến Thức Tổng Hợp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        :root {
+            --cyan: #00ffff;
+            --vio: #8a2be2;
+            --glow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        body {
+            background: conic-gradient(from 0deg, rgba(0,255,255,.25), rgba(138,43,226,.25), rgba(0,255,255,.25)), linear-gradient(135deg, #020c1b, #001e2b);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        .animate__animated {
+            animation-duration: 0.4s;
+        }
+        #galaxy {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* Màn hình Loading */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: #020c1b;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 255, 0.2);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Typing effect cursor */
+        .typing-container {
+            display: inline-flex;
+            align-items: center;
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: var(--cyan);
+            margin-left: 4px;
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        /* Hiệu ứng nháy 3 dấu chấm */
+        .loading-dots .dot {
+            opacity: 0.2;
+            animation: dotBlink 1.4s infinite ease-in-out both;
+        }
+        .loading-dots .dot:nth-child(1) { animation-delay: 0s; }
+        .loading-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBlink {
+            0%, 80%, 100% { opacity: 0.2; transform: scale(1); }
+            40% { opacity: 1; transform: scale(1.2); }
+        }
+        /* Firework Canvas Container */
+        #firework-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-6 relative">
+
+    <!-- Màn hình Loading -->
+    <div id="loading-screen">
+        <div class="spinner mb-6"></div>
+        <div class="text-white font-medium text-xl md:text-2xl tracking-wider mb-3 flex items-center justify-center">
+            <span>Chờ xíu</span>
+            <span class="loading-dots ml-0.5">
+                <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+            </span>
+        </div>
+        <div class="h-8 text-cyan-300 font-semibold text-base md:text-lg tracking-widest drop-shadow flex items-center">
+            <span class="typing-container">
+                <span id="typing-signature"></span>
+                <span class="cursor"></span>
+            </span>
+        </div>
+    </div>
+
+    <canvas id="galaxy"></canvas>
+    <canvas id="firework-canvas"></canvas>
+
+    <div class="flex flex-col items-center w-full max-w-2xl relative z-10">
+        <div id="app" class="w-full glass-panel rounded-3xl shadow-2xl p-6 md:p-10 animate__animated animate__fadeIn">
+            <!-- Khu vực hiển thị câu hỏi -->
+            <div id="quiz-container">
+                <h2 id="question-text" class="text-xl md:text-2xl font-bold text-white leading-relaxed drop-shadow-md mb-6 min-h-[4rem] transition-all"></h2>
+
+                <div id="options-container" class="space-y-3 md:space-y-4">
+                    <!-- Các nút đáp án render qua JS -->
+                </div>
+            </div>
+
+            <!-- Khu vực hoàn thành -->
+            <div id="result-container" class="hidden text-center py-8 animate__animated animate__zoomIn">
+                <h2 class="text-4xl md:text-5xl font-bold text-white drop-shadow-md mb-6">Hoàn thành xuất sắc! 🎉</h2>
+                <p class="text-lg md:text-xl text-white/90 drop-shadow mb-8 leading-relaxed">
+                    Bạn đã trả lời đúng tất cả các câu hỏi kiến thức tổng hợp.
+                </p>
+                <button onclick="restartQuiz()" class="glass-btn text-white font-bold text-lg md:text-xl py-4 px-10 rounded-2xl shadow-lg transition duration-300 transform hover:scale-105 active:scale-95 border-cyan-400/50 hover:border-cyan-300">
+                    Làm lại từ đầu 🔄
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chữ Made by Lucas ở góc dưới bên phải -->
+    <div class="fixed bottom-3 right-4 z-20 text-xs md:text-sm text-white/40 tracking-wider font-mono pointer-events-none select-none">
+        made by lucas
+    </div>
+
+    <script>
+        /* =========================================================
+           1. WEB AUDIO API SYNTHESIZER & AUDIO PLAYER
+           ========================================================= */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.victoryAudio = new Audio('copy_F17DE83D-331D-4BFF-A041-C3BE7CC84FAB.mp3');
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playClick() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [523.25, 659.25, 783.99, 1046.50];
+                freqs.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.3);
+                });
+            }
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [180, 130];
+                freqs.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.12);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.2);
+                });
+            }
+            playVictory() {
+                this.victoryAudio.currentTime = 0;
+                this.victoryAudio.play().catch(err => console.log("Không thể phát âm thanh:", err));
+            }
+        }
+        const sfx = new SoundFX();
+
+        /* =========================================================
+           2. GALAXY BACKGROUND ANIMATION
+           ========================================================= */
+        const cvs = document.getElementById('galaxy'), ctx = cvs.getContext('2d');
+        let W, H, stars = [], meteors = []; 
+        function size() { W = cvs.width = innerWidth; H = cvs.height = innerHeight; }
+        function makeStars(n) { stars = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.5 + .2, v: Math.random() * 0.25 + 0.08 })); }
+        
+        window.addEventListener('resize', () => { size(); makeStars(Math.floor((W * H) / 4000)); });
+        size();
+        makeStars(Math.floor((W * H) / 4000));
+
+        function drawGalaxy() {
+            ctx.clearRect(0, 0, W, H);
+            const grd = ctx.createRadialGradient(W * .7, H * .3, 0, W * .7, H * .3, Math.max(W, H) * .8); 
+            grd.addColorStop(0, 'rgba(0,255,255,.06)'); 
+            grd.addColorStop(1, 'transparent'); 
+            ctx.fillStyle = grd; 
+            ctx.fillRect(0, 0, W, H);
+            
+            ctx.fillStyle = '#fff'; 
+            for (const s of stars) { 
+                s.y += s.v; 
+                if (s.y > H) { s.y = 0; s.x = Math.random() * W; } 
+                ctx.beginPath(); 
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); 
+                ctx.fill(); 
+            }
+            
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cyan'); 
+            ctx.lineWidth = 1.6;
+            for (let i = meteors.length; i--;) { 
+                const m = meteors[i]; 
+                ctx.beginPath(); 
+                ctx.moveTo(m.x, m.y); 
+                ctx.lineTo(m.x - m.l * .6, m.y + m.l); 
+                ctx.stroke(); 
+                m.x += m.v * .35; 
+                m.y += m.v; 
+                if (m.y > H) meteors.splice(i, 1); 
+            }
+            if (Math.random() < 0.015) meteors.push({ x: Math.random() * W, y: 0, l: Math.random() * 90 + 40, v: Math.random() * 4 + 5 });
+            requestAnimationFrame(drawGalaxy);
+        }
+        drawGalaxy();
+
+        /* =========================================================
+           3. FIREWORKS EFFECT (Khi chọn đúng đáp án)
+           ========================================================= */
+        const fCvs = document.getElementById('firework-canvas');
+        const fCtx = fCvs.getContext('2d');
+        let fW, fH, fireworks = [];
+
+        function resizeFireworkCanvas() {
+            fW = fCvs.width = window.innerWidth;
+            fH = fCvs.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeFireworkCanvas);
+        resizeFireworkCanvas();
+
+        function createFireworks(originX, originY) {
+            const colors = ['#00ffff', '#8a2be2', '#ff00ff', '#ffff00', '#00ff00', '#ff4500'];
+            const particleCount = 45;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6;
+                fireworks.push({
+                    x: originX,
+                    y: originY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: 0.015 + Math.random() * 0.02,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: 2.5 + Math.random() * 2.5
+                });
+            }
+        }
+
+        function updateAndDrawFireworks() {
+            fCtx.clearRect(0, 0, fW, fH);
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const p = fireworks[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.08; // trọng lực kéo xuống
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    fireworks.splice(i, 1);
+                    continue;
+                }
+
+                fCtx.save();
+                fCtx.globalAlpha = p.alpha;
+                fCtx.fillStyle = p.color;
+                fCtx.beginPath();
+                fCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fCtx.fill();
+                fCtx.restore();
+            }
+            requestAnimationFrame(updateAndDrawFireworks);
+        }
+        updateAndDrawFireworks();
+
+        /* =========================================================
+           4. TYPING EFFECT (Chữ gõ phím "Made by Lucas")
+           ========================================================= */
+        function typeWriter() {
+            const text = "Made by Lucas";
+            const element = document.getElementById("typing-signature");
+            element.textContent = "";
+            let i = 0;
+            const speed = 100;
+
+            function typing() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typing, speed);
+                }
+            }
+            setTimeout(typing, 300);
+        }
+
+        window.addEventListener('load', () => {
+            typeWriter();
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loading-screen');
+                loadingScreen.style.opacity = '0';
+                loadingScreen.style.visibility = 'hidden';
+            }, 3000);
+        });
+
+        /* =========================================================
+           5. NGÂN HÀNG CÂU HỎI & LOGIC TRẮC NGHIỆM (12 CÂU)
+           ========================================================= */
+const rawQuestions = [
+    // Bài 1. Làm quen với trí tuệ nhân tạo
+    {
+        question: "Trí tuệ nhân tạo (AI) là gì?",
+        options: [
+            "Là khả năng của máy tính thực hiện các công việc mang tính trí tuệ của con người.",
+            "Là quá trình máy tính tự động hóa công việc lặp đi lặp lại.",
+            "Là công nghệ giúp con người lưu trữ thông tin tốt hơn.",
+            "Là hệ thống quản lý dữ liệu trên máy tính."
+        ],
+        correct: 0
+    },
+    {
+        question: "Mục đích chính của AI là gì?",
+        options: [
+            "Giúp máy tính lưu trữ dữ liệu tốt hơn.",
+            "Xây dựng phần mềm để máy tính có năng lực trí tuệ tương tự con người.",
+            "Tăng cường hiệu quả của tự động hóa.",
+            "Tạo ra các phần mềm máy tính với tốc độ xử lý nhanh hơn."
+        ],
+        correct: 1
+    },
+    {
+        question: "Khả năng học của AI giúp máy tính là gì?",
+        options: [
+            "Tự động hóa các tác vụ.",
+            "Điều chỉnh hành vi dựa trên dữ liệu mới.",
+            "Tăng tốc độ xử lý dữ liệu.",
+            "Chẩn đoán các lỗi phần mềm."
+        ],
+        correct: 1
+    },
+    {
+        question: "Khả năng suy luận của AI được áp dụng trong trường hợp nào sau đây?",
+        options: [
+            "Hệ thống đề xuất video trên YouTube.",
+            "Hệ thống chẩn đoán y tế.",
+            "Dịch thuật tự động trên Google dịch.",
+            "Tự động điều khiển xe tự lái."
+        ],
+        correct: 1
+    },
+    {
+        question: "Khả năng nhận thức của AI có đặc trưng gì?",
+        options: [
+            "Hiểu ngôn ngữ tự nhiên.",
+            "Phân tích và tổng hợp dữ liệu nhanh chóng.",
+            "Cảm nhận và hiểu biết môi trường thông qua cảm biến.",
+            "Điều chỉnh hành vi dựa trên phản hồi của người dùng."
+        ],
+        correct: 2
+    },
+    {
+        question: "Loại AI nào được thiết kế để thực hiện một nhiệm vụ cụ thể?",
+        options: [
+            "Trí tuệ nhân tạo tổng quát.",
+            "Trí tuệ nhân tạo hẹp.",
+            "Trí tuệ nhân tạo đa nhiệm.",
+            "Trí tuệ nhân tạo không hạn chế."
+        ],
+        correct: 1
+    },
+
+    // Bài 2. Trí tuệ nhân tạo trong khoa học và đời sống
+    {
+        question: "Ứng dụng của AI trong lĩnh vực y học giúp gì cho việc điều trị?",
+        options: [
+            "Tối ưu hóa quá trình chế tạo dược phẩm.",
+            "Cải thiện chất lượng chẩn đoán và điều trị bệnh.",
+            "Quản lý hồ sơ bệnh nhân tự động.",
+            "Điều hành các cơ sở y tế một cách thông minh."
+        ],
+        correct: 1
+    },
+    {
+        question: "AI trong giao thông giúp phát triển công nghệ gì?",
+        options: [
+            "Xe tự lái và quản lý giao thông thông minh.",
+            "Tối ưu hóa đường giao thông.",
+            "Cải thiện cơ sở hạ tầng đường bộ.",
+            "Giám sát vi phạm giao thông."
+        ],
+        correct: 0
+    },
+    {
+        question: "AI hỗ trợ giáo dục bằng cách nào?",
+        options: [
+            "Tạo ra các thiết bị dạy học thông minh.",
+            "Quản lý dữ liệu sinh viên tự động.",
+            "Phát triển các nền tảng học tập trực tuyến và theo dõi tiến trình.",
+            "Cải tiến giáo trình giảng dạy."
+        ],
+        correct: 2
+    },
+    {
+        question: "AI tổng quát (AGI) khác với AI hẹp ở điểm nào?",
+        options: [
+            "AI tổng quát có khả năng tự học và thực hiện nhiều công việc giống con người.",
+            "AI tổng quát chỉ xử lý được một số tác vụ cụ thể.",
+            "AI hẹp có khả năng tự học.",
+            "AI tổng quát chỉ có thể thực hiện một tác vụ nhất định."
+        ],
+        correct: 0
+    },
+    {
+        question: "ChatGPT do OpenAI phát triển được đánh giá cao vì lý do gì?",
+        options: [
+            "Khả năng tổng hợp thông tin phức tạp và thích nghi với phản hồi của người dùng.",
+            "Khả năng tự động hóa toàn bộ quy trình học tập.",
+            "Khả năng điều khiển các thiết bị thông minh.",
+            "Khả năng giải mã thông tin mật."
+        ],
+        correct: 0
+    },
+    {
+        question: "Một trong những mối lo ngại lớn về AI là gì?",
+        options: [
+            "Khả năng tăng cường năng suất lao động quá mức.",
+            "Áp lực thất nghiệp do tự động hóa công việc.",
+            "Tăng chi phí cho các doanh nghiệp nhỏ.",
+            "Giảm khả năng kiểm soát dữ liệu cá nhân."
+        ],
+        correct: 1
+    },
+
+    // Bài 3. Một số thiết bị mạng thông dụng
+    {
+        question: "Thiết bị nào được sử dụng để mở rộng phạm vi của mạng không dây?",
+        options: [
+            "Hub",
+            "Switch",
+            "Router",
+            "Wireless Access Point"
+        ],
+        correct: 3
+    },
+    {
+        question: "Router có chức năng chính là gì?",
+        options: [
+            "Kết nối các máy tính với nhau trong cùng một mạng LAN",
+            "Chuyển tiếp dữ liệu trên mạng LAN",
+            "Định tuyến dữ liệu giữa các mạng khác nhau",
+            "Mở rộng phạm vi của mạng không dây"
+        ],
+        correct: 2
+    },
+    {
+        question: "Thiết bị nào thường được tích hợp Wi-Fi và có cổng WAN cho kết nối Internet?",
+        options: [
+            "Hub",
+            "Switch",
+            "Router Wi-Fi",
+            "Wireless Access Point"
+        ],
+        correct: 2
+    },
+    {
+        question: "Thiết bị nào có chức năng chuyển đổi tín hiệu từ tín hiệu số sang tín hiệu tương tự và ngược lại?",
+        options: [
+            "Hub",
+            "Switch",
+            "Router",
+            "Modem"
+        ],
+        correct: 3
+    },
+    {
+        question: "Thiết bị nào thường được dùng để kết nối các thiết bị trong một mạng LAN mà không cần dây cáp?",
+        options: [
+            "Hub",
+            "Switch",
+            "Wireless Access Point",
+            "Router"
+        ],
+        correct: 2
+    },
+    {
+        question: "Điền vào chỗ chấm để được phát biểu đúng: \"Trong hệ thống mạng LAN có sử dụng switch, dữ liệu gửi từ thiết bị nguồn sẽ đến thiết bị đích nhờ...\"",
+        options: [
+            "địa chỉ MAC",
+            "địa chỉ IP",
+            "địa chỉ email",
+            "Không có đáp án đúng"
+        ],
+        correct: 0
+    },
+
+    // Bài 4. Giao thức mạng
+    {
+        question: "Giao thức mạng là gì?",
+        options: [
+            "Tập hợp các quy định về cách truyền tải dữ liệu giữa các thiết bị mạng",
+            "Một loại phần cứng để truyền dữ liệu",
+            "Một địa chỉ cho các thiết bị mạng",
+            "Một phần mềm quản lý mạng"
+        ],
+        correct: 0
+    },
+    {
+        question: "Giao thức IP có chức năng chính là gì?",
+        options: [
+            "Quản lý địa chỉ MAC của các thiết bị",
+            "Thiết lập địa chỉ IP và dẫn đường các gói dữ liệu",
+            "Mã hóa dữ liệu truyền trên mạng",
+            "Tạo kết nối giữa các thiết bị không dây"
+        ],
+        correct: 1
+    },
+    {
+        question: "Giao thức nào chịu trách nhiệm đảm bảo dữ liệu được gửi đến đúng ứng dụng và theo thứ tự?",
+        options: [
+            "IP",
+            "TCP",
+            "HTTP",
+            "MAC"
+        ],
+        correct: 1
+    },
+    {
+        question: "Địa chỉ IP khác với địa chỉ MAC ở điểm nào?",
+        options: [
+            "Địa chỉ IP là địa chỉ vật lý, còn MAC là địa chỉ tạm thời",
+            "Địa chỉ IP là địa chỉ tạm thời, còn MAC là địa chỉ vật lý (được nhà sản xuất gán trên thiết bị card mạng)",
+            "Địa chỉ IP chỉ dùng trong mạng LAN, còn MAC dùng cho mạng toàn cầu",
+            "Địa chỉ IP và MAC không liên quan đến nhau"
+        ],
+        correct: 1
+    },
+    {
+        question: "Giao thức nào được sử dụng để chia dữ liệu thành các gói và đảm bảo gửi lại nếu cần?",
+        options: [
+            "IP",
+            "HTTP",
+            "TCP",
+            "FTP"
+        ],
+        correct: 2
+    },
+    {
+        question: "IPv4 dùng bao nhiêu bit để biểu diễn địa chỉ IP?",
+        options: [
+            "8",
+            "64",
+            "32",
+            "128"
+        ],
+        correct: 2
+    },
+    {
+        question: "Khi một thiết bị kết nối mạng, giao thức IP sẽ làm gì đầu tiên?",
+        options: [
+            "Chia nhỏ dữ liệu thành các gói",
+            "Thiết lập địa chỉ cho thiết bị đó",
+            "Kết nối thiết bị với ứng dụng",
+            "Kiểm tra tính bảo mật của thiết bị"
+        ],
+        correct: 1
+    },
+    {
+        question: "IPv6 khác với IPv4 ở điểm nào?",
+        options: [
+            "IPv6 dùng địa chỉ 32-bit, IPv4 dùng địa chỉ 128-bit",
+            "IPv6 dùng địa chỉ 128-bit, IPv4 dùng địa chỉ 32-bit",
+            "IPv6 nhanh hơn IPv4",
+            "IPv6 chỉ dùng trong mạng nội bộ, IPv4 dùng cho Internet"
+        ],
+        correct: 1
+    },
+    {
+        question: "Địa chỉ IP tương ứng ở dạng thập phân của địa chỉ IP dưới dạng nhị phân sau đây là gì? 11000000 10101000 00001101 11010010",
+        options: [
+            "192.168.13.210",
+            "192.168.3.7",
+            "168.192.7.210",
+            "168.192.2.13"
+        ],
+        correct: 0
+    },
+
+    // Bài 5. Thực hành chia sẻ tài nguyên trên mạng
+    {
+        question: "Mục tiêu chính của việc thiết lập chế độ mạng riêng là gì?",
+        options: [
+            "Tắt tường lửa",
+            "Đảm bảo an toàn cho hệ thống mạng",
+            "Cho phép các thiết bị trong mạng cục bộ phát hiện và chia sẻ tài nguyên",
+            "Tăng tốc độ truyền dữ liệu"
+        ],
+        correct: 2
+    },
+    {
+        question: "Thư mục công cộng trên máy tính thường được lưu trữ ở đâu?",
+        options: [
+            "This PC → System (C:) → Users → Public",
+            "This PC → Documents → Public",
+            "This PC → Downloads → Public",
+            "This PC → System (C:) → Windows → Public"
+        ],
+        correct: 0
+    },
+    {
+        question: "Bước nào là đúng khi chia sẻ máy in trong mạng?",
+        options: [
+            "Control Panel → Network Settings → Printer Sharing",
+            "Control Panel → Hardware and Sound → View devices and printers → Printer properties → Sharing",
+            "Network and Sharing Center → Printer Sharing",
+            "Settings → Devices → Sharing"
+        ],
+        correct: 1
+    },
+    {
+        question: "Làm thế nào để tắt tạm thời tường lửa trên Windows?",
+        options: [
+            "Privacy and Security → Windows Security → Firewall & network protection → Private Network",
+            "Control Panel → Security → Firewall Settings",
+            "Settings → Network → Turn off Firewall",
+            "Network and Sharing Center → Turn off Firewall"
+        ],
+        correct: 0
+    },
+
+    // Bài 6. Giao tiếp và ứng xử trong không gian mạng
+    {
+        question: "Không gian mạng là gì?",
+        options: [
+            "Môi trường giao tiếp trực tiếp",
+            "Môi trường được tạo ra nhờ các mạng máy tính",
+            "Một cách thức giao tiếp bằng giọng nói",
+            "Môi trường giao tiếp qua điện thoại"
+        ],
+        correct: 1
+    },
+    {
+        question: "Một trong những nhược điểm chính của giao tiếp trong không gian mạng là gì?",
+        options: [
+            "Dễ dàng kết nối với mọi người",
+            "Thiếu tín hiệu phi ngôn ngữ",
+            "Công cụ giao tiếp đa dạng",
+            "Tăng cường giao tiếp đa quốc gia"
+        ],
+        correct: 1
+    },
+    {
+        question: "Khi giao tiếp trong không gian mạng, cần tôn trọng người khác bằng cách nào?",
+        options: [
+            "Chia sẻ thông tin cá nhân của họ",
+            "Sử dụng ngôn từ đúng mực và lịch sự",
+            "Tấn công cá nhân",
+            "Phớt lờ ý kiến của họ"
+        ],
+        correct: 1
+    },
+    {
+        question: "Tại sao việc cẩn trọng với ngôn từ trong không gian mạng lại quan trọng?",
+        options: [
+            "Để tăng lượng người theo dõi",
+            "Để tránh làm tổn thương người khác và duy trì mối quan hệ tốt đẹp",
+            "Để kiểm soát thông tin cá nhân",
+            "Để được nổi tiếng trên mạng"
+        ],
+        correct: 1
+    },
+    {
+        question: "Khi giao tiếp trong không gian mạng, nên tránh những hành vi nào sau đây?",
+        options: [
+            "Liên tục gửi các tin nhắn vô thưởng vô phạt cho người khác.",
+            "Chia sẻ thông tin cá nhân của người khác mà không được phép.",
+            "Nói xấu, đe dọa người khác trên mạng xã hội.",
+            "Tất cả các đáp án trên"
+        ],
+        correct: 3
+    }
+];        
+	
+	let quizData = [];
+        let currentIndex = 0;
+        let totalQuestions = 0;
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function prepareQuiz() {
+            const shuffledRaw = shuffleArray(rawQuestions);
+            quizData = shuffledRaw.map(item => {
+                const originalOptions = item.options;
+                const correctAnswerText = originalOptions[item.correct];
+                const shuffledOptions = shuffleArray(originalOptions);
+                const newCorrectIndex = shuffledOptions.indexOf(correctAnswerText);
+
+                return {
+                    question: item.question,
+                    options: shuffledOptions,
+                    correct: newCorrectIndex
+                };
+            });
+
+            currentIndex = 0;
+            totalQuestions = quizData.length;
+        }
+
+        function startQuiz() {
+            prepareQuiz();
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= totalQuestions) {
+                showResult();
+                return;
+            }
+
+            const q = quizData[currentIndex];
+            const questionEl = document.getElementById('question-text');
+            const optionsEl = document.getElementById('options-container');
+
+            questionEl.classList.remove('animate__fadeIn');
+            void questionEl.offsetWidth; 
+            questionEl.classList.add('animate__fadeIn');
+            questionEl.innerText = `Câu ${currentIndex + 1}: ${q.question}`;
+
+            optionsEl.innerHTML = '';
+            const optionLabels = ['A', 'B', 'C', 'D'];
+
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn glass-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white drop-shadow transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] shadow-sm animate__animated animate__fadeInUp";
+                btn.style.animationDelay = `${idx * 0.05}s`;
+                btn.innerHTML = `<span class="font-bold uppercase mr-3 text-cyan-300 text-lg md:text-xl">${optionLabels[idx]}.</span> ${optText}`;
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const rect = btn.getBoundingClientRect();
+                    selectAnswer(idx, btn, rect.left + rect.width / 2, rect.top + rect.height / 2);
+                };
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(selectedIndex, btnElement, btnX, btnY) {
+            const currentQ = quizData[currentIndex];
+            const allButtons = document.querySelectorAll('.option-btn');
+
+            if (selectedIndex === currentQ.correct) {
+                sfx.playCorrect();
+                createFireworks(btnX, btnY);
+                btnElement.className = "option-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white shadow-sm bg-cyan-600/80 border-cyan-400 backdrop-blur-md animate__animated animate__pulse";
+
+                allButtons.forEach(btn => btn.disabled = true);
+
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 900);
+
+            } else {
+                sfx.playWrong();
+                btnElement.className = "option-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white shadow-sm bg-red-600/80 border-red-400 backdrop-blur-md animate__animated animate__shakeX";
+                btnElement.style.animationDuration = '0.6s';
+                btnElement.disabled = true; 
+            }
+        }
+
+        function showResult() {
+            sfx.playVictory();
+            createFireworks(window.innerWidth / 2, window.innerHeight / 2);
+
+            document.getElementById('quiz-container').classList.add('hidden');
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.classList.remove('hidden');
+        }
+
+        function restartQuiz() {
+            sfx.playClick();
+            startQuiz();
+        }
+
+        startQuiz();
+    </script>
+</body>
+</html>
