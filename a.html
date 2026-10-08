@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trắc Nghiệm Kiến Thức Tổng Hợp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        :root {
+            --cyan: #00ffff;
+            --vio: #8a2be2;
+            --glow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        body {
+            background: conic-gradient(from 0deg, rgba(0,255,255,.25), rgba(138,43,226,.25), rgba(0,255,255,.25)), linear-gradient(135deg, #020c1b, #001e2b);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        .animate__animated {
+            animation-duration: 0.4s;
+        }
+        #galaxy {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* Màn hình Loading */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: #020c1b;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 255, 0.2);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Typing effect cursor */
+        .typing-container {
+            display: inline-flex;
+            align-items: center;
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: var(--cyan);
+            margin-left: 4px;
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        /* Hiệu ứng nháy 3 dấu chấm */
+        .loading-dots .dot {
+            opacity: 0.2;
+            animation: dotBlink 1.4s infinite ease-in-out both;
+        }
+        .loading-dots .dot:nth-child(1) { animation-delay: 0s; }
+        .loading-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBlink {
+            0%, 80%, 100% { opacity: 0.2; transform: scale(1); }
+            40% { opacity: 1; transform: scale(1.2); }
+        }
+        /* Firework Canvas Container */
+        #firework-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-6 relative">
+
+    <!-- Màn hình Loading -->
+    <div id="loading-screen">
+        <div class="spinner mb-6"></div>
+        <div class="text-white font-medium text-xl md:text-2xl tracking-wider mb-3 flex items-center justify-center">
+            <span>Chờ xíu</span>
+            <span class="loading-dots ml-0.5">
+                <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+            </span>
+        </div>
+        <div class="h-8 text-cyan-300 font-semibold text-base md:text-lg tracking-widest drop-shadow flex items-center">
+            <span class="typing-container">
+                <span id="typing-signature"></span>
+                <span class="cursor"></span>
+            </span>
+        </div>
+    </div>
+
+    <canvas id="galaxy"></canvas>
+    <canvas id="firework-canvas"></canvas>
+
+    <div class="flex flex-col items-center w-full max-w-2xl relative z-10">
+        <div id="app" class="w-full glass-panel rounded-3xl shadow-2xl p-6 md:p-10 animate__animated animate__fadeIn">
+            <!-- Khu vực hiển thị câu hỏi -->
+            <div id="quiz-container">
+                <h2 id="question-text" class="text-xl md:text-2xl font-bold text-white leading-relaxed drop-shadow-md mb-6 min-h-[4rem] transition-all"></h2>
+
+                <div id="options-container" class="space-y-3 md:space-y-4">
+                    <!-- Các nút đáp án render qua JS -->
+                </div>
+            </div>
+
+            <!-- Khu vực hoàn thành -->
+            <div id="result-container" class="hidden text-center py-8 animate__animated animate__zoomIn">
+                <h2 class="text-4xl md:text-5xl font-bold text-white drop-shadow-md mb-6">Hoàn thành xuất sắc! 🎉</h2>
+                <p class="text-lg md:text-xl text-white/90 drop-shadow mb-8 leading-relaxed">
+                    Bạn đã trả lời đúng tất cả các câu hỏi kiến thức tổng hợp.
+                </p>
+                <button onclick="restartQuiz()" class="glass-btn text-white font-bold text-lg md:text-xl py-4 px-10 rounded-2xl shadow-lg transition duration-300 transform hover:scale-105 active:scale-95 border-cyan-400/50 hover:border-cyan-300">
+                    Làm lại từ đầu 🔄
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chữ Made by Lucas ở góc dưới bên phải -->
+    <div class="fixed bottom-3 right-4 z-20 text-xs md:text-sm text-white/40 tracking-wider font-mono pointer-events-none select-none">
+        made by lucas
+    </div>
+
+    <script>
+        /* =========================================================
+           1. WEB AUDIO API SYNTHESIZER & AUDIO PLAYER
+           ========================================================= */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.victoryAudio = new Audio('copy_F17DE83D-331D-4BFF-A041-C3BE7CC84FAB.mp3');
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playClick() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [523.25, 659.25, 783.99, 1046.50];
+                freqs.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.3);
+                });
+            }
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [180, 130];
+                freqs.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.12);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.2);
+                });
+            }
+            playVictory() {
+                this.victoryAudio.currentTime = 0;
+                this.victoryAudio.play().catch(err => console.log("Không thể phát âm thanh:", err));
+            }
+        }
+        const sfx = new SoundFX();
+
+        /* =========================================================
+           2. GALAXY BACKGROUND ANIMATION
+           ========================================================= */
+        const cvs = document.getElementById('galaxy'), ctx = cvs.getContext('2d');
+        let W, H, stars = [], meteors = []; 
+        function size() { W = cvs.width = innerWidth; H = cvs.height = innerHeight; }
+        function makeStars(n) { stars = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.5 + .2, v: Math.random() * 0.25 + 0.08 })); }
+        
+        window.addEventListener('resize', () => { size(); makeStars(Math.floor((W * H) / 4000)); });
+        size();
+        makeStars(Math.floor((W * H) / 4000));
+
+        function drawGalaxy() {
+            ctx.clearRect(0, 0, W, H);
+            const grd = ctx.createRadialGradient(W * .7, H * .3, 0, W * .7, H * .3, Math.max(W, H) * .8); 
+            grd.addColorStop(0, 'rgba(0,255,255,.06)'); 
+            grd.addColorStop(1, 'transparent'); 
+            ctx.fillStyle = grd; 
+            ctx.fillRect(0, 0, W, H);
+            
+            ctx.fillStyle = '#fff'; 
+            for (const s of stars) { 
+                s.y += s.v; 
+                if (s.y > H) { s.y = 0; s.x = Math.random() * W; } 
+                ctx.beginPath(); 
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); 
+                ctx.fill(); 
+            }
+            
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cyan'); 
+            ctx.lineWidth = 1.6;
+            for (let i = meteors.length; i--;) { 
+                const m = meteors[i]; 
+                ctx.beginPath(); 
+                ctx.moveTo(m.x, m.y); 
+                ctx.lineTo(m.x - m.l * .6, m.y + m.l); 
+                ctx.stroke(); 
+                m.x += m.v * .35; 
+                m.y += m.v; 
+                if (m.y > H) meteors.splice(i, 1); 
+            }
+            if (Math.random() < 0.015) meteors.push({ x: Math.random() * W, y: 0, l: Math.random() * 90 + 40, v: Math.random() * 4 + 5 });
+            requestAnimationFrame(drawGalaxy);
+        }
+        drawGalaxy();
+
+        /* =========================================================
+           3. FIREWORKS EFFECT (Khi chọn đúng đáp án)
+           ========================================================= */
+        const fCvs = document.getElementById('firework-canvas');
+        const fCtx = fCvs.getContext('2d');
+        let fW, fH, fireworks = [];
+
+        function resizeFireworkCanvas() {
+            fW = fCvs.width = window.innerWidth;
+            fH = fCvs.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeFireworkCanvas);
+        resizeFireworkCanvas();
+
+        function createFireworks(originX, originY) {
+            const colors = ['#00ffff', '#8a2be2', '#ff00ff', '#ffff00', '#00ff00', '#ff4500'];
+            const particleCount = 45;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6;
+                fireworks.push({
+                    x: originX,
+                    y: originY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: 0.015 + Math.random() * 0.02,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: 2.5 + Math.random() * 2.5
+                });
+            }
+        }
+
+        function updateAndDrawFireworks() {
+            fCtx.clearRect(0, 0, fW, fH);
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const p = fireworks[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.08; // trọng lực kéo xuống
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    fireworks.splice(i, 1);
+                    continue;
+                }
+
+                fCtx.save();
+                fCtx.globalAlpha = p.alpha;
+                fCtx.fillStyle = p.color;
+                fCtx.beginPath();
+                fCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fCtx.fill();
+                fCtx.restore();
+            }
+            requestAnimationFrame(updateAndDrawFireworks);
+        }
+        updateAndDrawFireworks();
+
+        /* =========================================================
+           4. TYPING EFFECT (Chữ gõ phím "Made by Lucas")
+           ========================================================= */
+        function typeWriter() {
+            const text = "Made by Lucas";
+            const element = document.getElementById("typing-signature");
+            element.textContent = "";
+            let i = 0;
+            const speed = 100;
+
+            function typing() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typing, speed);
+                }
+            }
+            setTimeout(typing, 300);
+        }
+
+        window.addEventListener('load', () => {
+            typeWriter();
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loading-screen');
+                loadingScreen.style.opacity = '0';
+                loadingScreen.style.visibility = 'hidden';
+            }, 3000);
+        });
+
+        /* =========================================================
+           5. NGÂN HÀNG CÂU HỎI & LOGIC TRẮC NGHIỆM (12 CÂU)
+           ========================================================= */
+const rawQuestions = [
+    // ===== FILE 1 - PHẦN I (Câu 10-26) =====
+    {
+        question: "Khi để cốc nước đá lạnh ngoài không khí, ta thấy có những giọt nước đọng lại bên ngoài thành cốc. Hiện tượng này xuất hiện chủ yếu là do",
+        options: ["nước trong cốc bay hơi và ngưng tụ khi gặp lạnh.", "hơi nước trong không khí ngưng tụ thành giọt bám vào cốc.", "nước trong cốc thấm ra ngoài tạo thành giọt.", "do không khí có độ ẩm cao."],
+        correct: 1
+    },
+    {
+        question: "Phát biểu nào sau đây về chuyển động phân tử ở các thể khác nhau là sai?",
+        options: ["Các phân tử chất rắn dao động xung quanh các vị trí cân bằng xác định.", "Các phân tử chất lỏng dao động xung quanh các vị trí cân bằng không cố định.", "Các phân tử chất khí chuyển động hỗn loạn không ngừng.", "Các phân tử chất rắn, chất lỏng và chất khí đều chuyển động hỗn loạn như nhau."],
+        correct: 3
+    },
+    {
+        question: "Theo mô hình động học phân tử, lực liên kết giữa các phân tử",
+        options: ["chỉ có lực hút.", "chỉ có lực đẩy.", "chỉ là lực hút khi ở thể rắn và chỉ là lực đẩy khi ở thể lỏng.", "gồm cả lực hút và lực đẩy."],
+        correct: 3
+    },
+    {
+        question: "Tính chất nào sau đây không phải là tính chất của chất ở thể khí?",
+        options: ["Có hình dạng và thể tích xác định.", "Các phân tử chuyển động hỗn loạn không ngừng.", "Có thể nén được dễ dàng.", "Có lực tương tác phân tử trung bình nhỏ hơn so với khi ở thể rắn và thể lỏng."],
+        correct: 0
+    },
+    {
+        question: "Chất khí không có hình dạng xác định vì",
+        options: ["các phân tử chuyển động hỗn loạn không ngừng.", "các phân tử luôn đứng yên.", "lực hút giữa các phân tử rất lớn.", "các phân tử chuyển động với tốc độ trung bình rất nhỏ."],
+        correct: 0
+    },
+    {
+        question: "Chất rắn có hình dạng xác định vì",
+        options: ["các phân tử chuyển động hỗn loạn không ngừng.", "các phân tử luôn đứng yên.", "lực hút giữa các phân tử rất lớn.", "các phân tử chuyển động với tốc độ trung bình rất nhỏ."],
+        correct: 2
+    },
+    {
+        question: "Gọi n1, n2, và n3 lần lượt là mật độ phân tử của một chất ở thể rắn, thể lỏng, và thể khí. So sánh nào dưới đây là đúng?",
+        options: ["n1 < n2 < n3.", "n1 > n2 > n3.", "n1 < n3 < n2.", "n1 > n3 > n2."],
+        correct: 1
+    },
+    {
+        question: "Gọi x, y, và z lần lượt là khoảng cách trung bình giữa các phân tử của một chất ở thể rắn, thể khí, và thể lỏng. Hệ thức đúng là",
+        options: ["z < y < x.", "x < z < y.", "y < x < z.", "x < y < z."],
+        correct: 1
+    },
+    {
+        question: "Các phân tử chất dao động quanh vị trí cân bằng không cố định khi chất tồn tại ở thể",
+        options: ["rắn.", "lỏng.", "khí.", "plasma."],
+        correct: 1
+    },
+    {
+        question: "Tính chất giống nhau của chất lỏng và chất khí là",
+        options: ["có thể tích xác định.", "không có hình dạng xác định.", "dễ bị nén.", "lực tương tác trung bình giữa các phân là không đáng kể."],
+        correct: 1
+    },
+    {
+        question: "Theo mô hình động học phân tử thì thành tố nhỏ nhất của một chất là",
+        options: ["electron.", "hạt nhân.", "nguyên tử.", "phân tử."],
+        correct: 3
+    },
+    {
+        question: "Khi quan sát các hạt khói chuyển động lơ lửng trong không khí thì",
+        options: ["chuyển động của các phân tử không khí là chuyển động Brown.", "chuyển động của cả các hạt khói và các phân tử không khí đều là chuyển động Brown.", "chuyển động của các hạt khói là chuyển động Brown.", "chuyển động của cả các hạt khói và phân tử không khí đều là chuyển động nhiệt."],
+        correct: 2
+    },
+    {
+        question: "Nhà thực vật học Brown đã quan sát chuyển động hỗn loạn, không ngừng của một loại hạt thông qua kính hiển vi mà ông gọi là chuyển động Brown. Loại hạt này là",
+        options: ["phân tử khí.", "phân tử nước.", "hạt phấn hoa.", "hạt bụi mịn."],
+        correct: 2
+    },
+    {
+        question: "Chuyển động Brown của các hạt phấn hoa trong chất lỏng chứng tỏ",
+        options: ["có lực hút giữa các phân tử chất lỏng.", "có lực đẩy giữa các phân tử chất lỏng.", "các hạt phấn hoa chuyển động nhiệt.", "các phân tử chất lỏng chuyển động nhiệt."],
+        correct: 3
+    },
+    {
+        question: "Chuyển động Brown có thể quan sát được trong các môi trường nào sau đây?",
+        options: ["Chất rắn và chất lỏng.", "Chất rắn và chất khí.", "Chất lỏng và chất khí.", "Chân không và chất rắn."],
+        correct: 2
+    },
+    {
+        question: "Một khối chất rắn kết tinh được đun nóng với công suất cấp nhiệt không đổi. Đồ thị hình bên mô tả sự phụ thuộc của nhiệt độ của khối chất theo thời gian đun. Nhận xét nào dưới đây là đúng?",
+        options: ["Giai đoạn từ (1) đến (2) là quá trình ngưng tụ của chất lỏng.", "Giai đoạn từ (2) đến (3) là giai đoạn tăng nhiệt độ của chất rắn.", "Giai đoạn từ (3) đến (4) là quá trình nóng chảy của chất rắn.", "Giai đoạn từ (4) đến (5) là quá trình tăng nhiệt độ của chất khí."],
+        correct: 3
+    },
+    {
+        question: "Theo giản đồ pha của nước ở hình bên, nếu giữ nguyên nhiệt độ và chỉ giảm áp suất thì có thể làm xảy ra hiện tượng nào sau đây?",
+        options: ["Hơi nước ngưng kết thành nước đá.", "Nước hóa hơi thành hơi nước.", "Nước đá nóng chảy thành nước.", "Hơi nước ngưng tụ thành nước."],
+        correct: 1
+    },
+
+    // ===== FILE 1 - ĐỀ KIỂM TRA PHẦN I (Câu 1-20) =====
+    {
+        question: "Sự nóng chảy là quá trình chuyển từ thể",
+        options: ["lỏng sang rắn.", "rắn sang lỏng.", "khí sang lỏng.", "lỏng sang khí."],
+        correct: 1
+    },
+    {
+        question: "Sự ngưng tụ là quá trình chuyển từ thể",
+        options: ["lỏng sang rắn.", "rắn sang lỏng.", "lỏng sang khí.", "khí sang lỏng."],
+        correct: 3
+    },
+    {
+        question: "Cồn y tế chuyển từ thể lỏng sang thể khí rất nhanh ở điều kiện thường. Khi xoa cồn vào da, ta cảm thấy lạnh ở vùng da đó vì cồn",
+        options: ["thu nhiệt lượng từ cơ thể qua vùng da đó để bay hơi.", "khi bay hơi truyền nhiệt vào vùng da đó.", "khi bay hơi kéo theo lượng nước tại vùng da đó ra khỏi cơ thể.", "khi bay hơi tạo ra dòng nước mát tại chỗ da đó."],
+        correct: 0
+    },
+    {
+        question: "Với cùng một chất, quá trình chuyển thể nào sẽ làm tăng lực tương tác giữa các phân tử nhiều nhất?",
+        options: ["Nóng chảy.", "Đông đặc.", "Ngưng kết.", "Hóa hơi."],
+        correct: 2
+    },
+    {
+        question: "Trong thời gian nóng chảy, nhiệt độ của một khối chất rắn vô định hình",
+        options: ["tăng dần.", "giảm dần.", "không thay đổi.", "tăng rồi giảm."],
+        correct: 0
+    },
+    {
+        question: "Khi để cốc nước đá lạnh ngoài không khí, ta thấy có những giọt nước đọng lại bên ngoài thành cốc. Hiện tượng này xuất hiện chủ yếu là do",
+        options: ["nước trong cốc bay hơi và ngưng tụ khi gặp lạnh.", "hơi nước trong không khí ngưng tụ thành giọt bám vào cốc.", "nước trong cốc thấm ra ngoài tạo thành giọt.", "do không khí có độ ẩm cao."],
+        correct: 1
+    },
+    {
+        question: "Gọi D1, D2, và D3 lần lượt khối lượng của một lượng chất xác định khi tồn tại ở thể rắn, thể lỏng, và thể khí. So sánh nào dưới đây là đúng?",
+        options: ["D1 < D2 < D3.", "D1 > D2 > D3.", "D1 < D3 < D2.", "D1 > D3 > D2."],
+        correct: 1
+    },
+    {
+        question: "Gọi x, y, và z lần lượt là độ lớn lực tương tác trung bình giữa các phân tử của một chất ở thể rắn, thể lỏng, và thể khí. Hệ thức đúng là",
+        options: ["z > y > x.", "x > y > z.", "y > x > z.", "x > z > y."],
+        correct: 1
+    },
+    {
+        question: "Các phân tử chất dao động quanh vị trí cân bằng xác định khi chất tồn tại ở thể",
+        options: ["rắn.", "lỏng.", "khí.", "plasma."],
+        correct: 0
+    },
+    {
+        question: "Các phân tử chất chuyển động hỗn loạn không ngừng khi chất tồn tại ở thể",
+        options: ["rắn.", "lỏng.", "khí.", "plasma."],
+        correct: 2
+    },
+    {
+        question: "Tính chất giống nhau của chất rắn và chất lỏng là",
+        options: ["có thể tích xác định.", "không có hình dạng xác định.", "dễ bị nén.", "lực tương tác trung bình giữa các phân là không đáng kể."],
+        correct: 0
+    },
+    {
+        question: "Tính chất nào sau đây không phải của phân tử?",
+        options: ["Chuyển động không ngừng.", "Giữa các phân tử có khoảng cách.", "Có lúc đứng yên, có lúc chuyển động.", "Chuyển động càng nhanh thì nhiệt độ của vật càng cao."],
+        correct: 2
+    },
+    {
+        question: "Hiện tượng nào sau đây chứng tỏ sự tồn tại của lực đẩy phân tử?",
+        options: ["Sự giãn nở tự do của chất khí.", "Khối sắt khó bị nén.", "Hương thơm tỏa ra từ lọ nước hoa.", "Lò xo chống lại việc nó bị kéo giãn."],
+        correct: 1
+    },
+    {
+        question: "Hiện tượng nào sau đây không chứng tỏ sự tồn tại của lực tương tác phân tử?",
+        options: ["Không khí dễ bị nén.", "Dây thép khó kéo dãn.", "Nước lỏng khó bị nén.", "Hai tấm kim loại mài phẳng ép dính vào nhau."],
+        correct: 0
+    },
+    {
+        question: "Một khối chất rắn kết tinh được đun nóng với công suất cấp nhiệt không đổi. Đồ thị hình bên mô tả sự phụ thuộc của nhiệt độ của khối chất theo thời gian đun. Nhận xét nào dưới đây là sai?",
+        options: ["Giai đoạn từ (1) đến (2) là quá trình nóng chảy của chất rắn.", "Giai đoạn từ (2) đến (3) là giai đoạn tăng nhiệt độ của chất lỏng.", "Giai đoạn từ (3) đến (4) là quá trình sôi của chất lỏng.", "Giai đoạn từ (4) đến (5) là quá trình hóa hơi của chất lỏng."],
+        correct: 3
+    },
+    {
+        question: "Theo giản đồ pha của nước ở hình bên, nếu giữ nguyên nhiệt độ và chỉ tăng áp suất thì không thể làm xảy ra hiện tượng nào sau đây?",
+        options: ["Hơi nước ngưng tụ thành nước.", "Hơi nước ngưng kết thành nước đá.", "Nước đông đặc thành nước đá.", "Nước đá nóng chảy thành nước."],
+        correct: 2
+    },
+    {
+        question: "Khi quan sát các hạt phấn hoa chuyển động trong nước thì",
+        options: ["chuyển động của các phân tử nước là chuyển động nhiệt.", "chuyển động của cả các hạt khói và các phân tử không khí đều là chuyển động Brown.", "chuyển động của các hạt khói là chuyển động nhiệt.", "chuyển động của cả các hạt khói và phân tử không khí đều là chuyển động nhiệt."],
+        correct: 0
+    },
+    {
+        question: "Chuyển động Brown của các hạt khói trong không khí chứng tỏ",
+        options: ["có lực hút giữa các phân tử không khí.", "có lực đẩy giữa các phân tử không khí.", "các hạt khói chuyển động nhiệt.", "các phân tử không khí chuyển động nhiệt."],
+        correct: 3
+    },
+    {
+        question: "Phát biểu nào sau đây là đúng về phân tử cấu tạo nên chất lỏng và chất rắn?",
+        options: ["Các phân tử chất ở thể rắn đứng yên ở vị trí cân bằng.", "Các phân tử chất ở thể rắn dao động quanh vị trí cân bằng không cố định.", "Các phân tử chất ở thể lỏng chuyển động hỗn loạn không ngừng.", "Các phân tử chất ở thể lỏng dao động quanh vị trí cân bằng không cố định."],
+        correct: 3
+    },
+    {
+        question: "Với một lượng chất khí xác định thì",
+        options: ["có thể tích riêng và hình dạng riêng.", "không có thể tích riêng nhưng có hình dạng riêng.", "không có thể tích riêng và hình dạng riêng.", "có thể tích riêng nhưng không có hình dạng riêng."],
+        correct: 2
+    },
+
+    // ===== FILE 2 - PHẦN I (Câu 1-23) =====
+    {
+        question: "Phát biểu sau đây về nội năng là sai?",
+        options: ["Nội năng của một vật phụ thuộc vào nhiệt độ và thể tích của vật.", "Nội năng của một vật có thể bị biến đổi bằng quá trình truyền nhiệt hoặc thực hiện công.", "Nội năng của một vật là tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật.", "Số đo độ biến thiên nội năng trong quá trình truyền nhiệt được gọi là công."],
+        correct: 3
+    },
+    {
+        question: "Phát biểu sau đây về nhiệt lượng là sai?",
+        options: ["Nhiệt lượng là năng lượng nhiệt tồn tại bên trong một vật.", "Đơn vị của nhiệt lượng cũng là đơn vị của nội năng.", "Nhiệt lượng là phần năng lượng nhiệt truyền từ vật này sang vật khác do sự chênh lệch nhiệt độ giữa chúng.", "Nhiệt lượng là phần nội năng tăng thêm hoặc giảm đi của một vật khi nhận được từ vật khác hoặc truyền cho vật khác."],
+        correct: 0
+    },
+    {
+        question: "Nội năng của một vật rắn",
+        options: ["chỉ phụ thuộc vào nhiệt độ của vật.", "chỉ phụ thuộc vào thể tích của vật.", "phụ thuộc vào cả nhiệt độ và thể tích của vật.", "không phụ thuộc vào nhiệt độ và thể tích của vật."],
+        correct: 2
+    },
+    {
+        question: "Phát biểu nào sau đây là đúng?",
+        options: ["Độ biến thiên nội năng của một vật bằng với độ biến thiên nhiệt độ của vật đó.", "Nội năng của một vật bằng nhiệt lượng vật nhận vào trong quá trình truyền nhiệt.", "Nội năng là phần năng lượng vật được nhận thêm hay mất bớt đi trong quá trình truyền nhiệt.", "Có thể làm thay đổi nội năng của vật bằng cách thực hiện công."],
+        correct: 3
+    },
+    {
+        question: "Phát biểu nào sau đây là đúng?",
+        options: ["Nội năng là một dạng năng lượng.", "Nội năng của một vật bằng công mà một vật nhận vào trong quá trình thực hiện công.", "Nội năng của vật A lớn hơn nội năng của vật B thì nhiệt độ của vật A chắc chắn lớn hơn nhiệt độ của vật B.", "Nội năng của một vật chỉ thay đổi trong quá trình truyền nhiệt, không thay đổi trong quá trình thực hiện công."],
+        correct: 0
+    },
+    {
+        question: "Cách nào sau đây không trực tiếp làm thay đổi nội năng của một vật?",
+        options: ["Làm lạnh vật.", "Đưa vật lên cao.", "Đốt nóng vật.", "Nén làm giảm thể tích vật."],
+        correct: 1
+    },
+    {
+        question: "Theo định luật 1 của nhiệt động lực học ΔU = A + Q. Trường hợp A > 0 và Q < 0 phù hợp với quá trình nào sau đây?",
+        options: ["Nhận công và tỏa nhiệt.", "Nhận nhiệt và sinh công.", "Tỏa nhiệt và sinh công.", "Nhận nhiệt và nhận công."],
+        correct: 0
+    },
+    {
+        question: "Nội năng của một vật không phụ thuộc trực tiếp vào đại lượng dưới đây?",
+        options: ["Nhiệt độ của vật.", "Thể tích của vật.", "Áp suất tác dụng lên bề mặt vật.", "Tổng động năng và thế năng tương tác phân tử."],
+        correct: 2
+    },
+    {
+        question: "Nếu tăng nhiệt độ của một vật mà không làm thay đổi thể tích của nó thì nội năng của vật",
+        options: ["tăng lên.", "giảm đi.", "tăng rồi giảm.", "không đổi."],
+        correct: 0
+    },
+    {
+        question: "Theo định luật 1 của nhiệt động lực học ΔU = A + Q. Trường hợp A > 0 và Q > 0 phù hợp với quá trình nào sau đây?",
+        options: ["Nhận công và tỏa nhiệt.", "Nhận nhiệt và sinh công.", "Tỏa nhiệt và sinh công.", "Nhận nhiệt và nhận công."],
+        correct: 3
+    },
+    {
+        question: "Cấp nhiệt để cho một lượng khí chứa trong bình kín. Nếu bỏ qua sự giãn nở vì nhiệt của bình thì hệ thức mô tả mối liên hệ giữa nhiệt lượng Q mà khí trong bình nhận được với độ biến thiên nội năng ΔU của nó là",
+        options: ["ΔU = 0.", "ΔU = A + Q.", "ΔU = Q.", "ΔU = A."],
+        correct: 2
+    },
+    {
+        question: "Trong một quá trình biến đổi, nội năng của một khối khí tăng thêm 10 J. Nếu trong quá trình đó khối khí nhận vào một nhiệt lượng 40 J thì khối khí đã",
+        options: ["sinh công 30 J.", "nhận công 30 J.", "sinh công 50 J.", "nhận công 50 J."],
+        correct: 0
+    },
+    {
+        question: "Thực hiện công 1000 J để nén khí trong một xilanh đặt trong môi trường chân không. Biết rằng trong quá trình nén, khối khí đã truyền ra môi trường bên ngoài một nhiệt lượng 400 J. Nội năng của khối khí trong quá trình nén đã",
+        options: ["giảm 600 J.", "giảm 1400 J.", "tăng 600 J.", "tăng 1400 J."],
+        correct: 2
+    },
+    {
+        question: "Cung cấp một nhiệt lượng 1,5 J cho khối khí đựng trong một xilanh đặt nằm ngang trong môi trường chân không. Khối khí nở ra đẩy pit-tông dịch chuyển một đoạn bằng 5 cm rồi dừng lại. Biết lực ma sát giữa pit-tông và xilanh có độ lớn 20 N. Độ biến thiên nội năng của khí là",
+        options: ["0,5 J.", "2,5 J.", "-0,5 J.", "-2,5 J."],
+        correct: 0
+    },
+    {
+        question: "Khi nén làm giảm thể tích của một vật trong điều kiện không trao đổi nhiệt với bên ngoài thì nội năng của vật",
+        options: ["tăng lên.", "giảm đi.", "không đổi.", "tăng lên rồi giảm đi."],
+        correct: 0
+    },
+    {
+        question: "Cách nào dưới đây có xu hướng làm giảm nội năng của một vật?",
+        options: ["Làm cho thể tích vật tăng lên.", "Làm cho thể tích của vật giảm đi.", "Cho vật tiếp xúc với vật khác có nhiệt độ cao hơn.", "Cho vật tiếp xúc với vật khác có khối lượng lớn hơn."],
+        correct: 0
+    },
+    {
+        question: "Cho hai vật có cùng nhiệt độ tiếp xúc với nhau. Nếu hệ hai vật không trao đổi nhiệt với môi trường bên ngoài thì phát biểu nào sau đây là đúng?",
+        options: ["Không có truyền nhiệt giữa hai vật.", "Nội năng của cả hai vật thay đổi.", "Một vật sinh công, vật còn lại nhận công.", "Thể tích của cả hai vật thay đổi."],
+        correct: 0
+    },
+    {
+        question: "Nhận xét nào sau đây là sai khi nói về nội năng của một vật?",
+        options: ["Nội năng của một vật bằng tổng động năng và thế năng tương tác của các phân tử cấu tạo nên vật.", "Khi tổng động năng của các phân tử cấu tạo nên vật tăng lên thì nhiệt độ của vật tăng.", "Khi tổng thế năng tương tác giữa các phân tử cấu tạo nên vật thay đổi thì thể tích của vật thay đổi.", "Nội năng của một vật chỉ phụ thuộc vào thể tích của vật."],
+        correct: 3
+    },
+    {
+        question: "Khi hai vật có nhiệt độ khác nhau tiếp xúc với nhau thì năng lượng nhiệt sẽ truyền một cách tự động từ",
+        options: ["vật có nhiệt độ thấp hơn sang vật có nhiệt độ cao hơn.", "vật có khối lượng lớn hơn sang vật có khối lượng nhỏ hơn.", "vật có thể tích lớn hơn sang vật có thể tích nhỏ hơn.", "vật có nhiệt độ cao hơn sang vật có nhiệt độ thấp hơn."],
+        correct: 3
+    },
+    {
+        question: "Trong quá trình nào dưới đây nội năng của vật thay đổi do quá trình thực hiện công?",
+        options: ["Nồi nước nóng dần trên ngọn lửa.", "Khối khí trong xi-lanh bị nén.", "Làm nóng vật dưới ánh nắng Mặt Trời.", "Cục sắt nóng đỏ được thả vào nước rồi nguội dần."],
+        correct: 1
+    },
+    {
+        question: "Nén một khối khí lí tưởng trong xi-lanh kín. Nội năng của khối khí",
+        options: ["không đổi, nếu xi-lanh cách nhiệt.", "giảm do khối khí nhận công.", "tăng, nếu xi-lanh cách nhiệt.", "tăng do khối khí nhận công."],
+        correct: 2
+    },
+    {
+        question: "Truyền nhiệt cho một khối khí lí tưởng đựng trong xi-lanh kín. Nội năng của khối khí",
+        options: ["không đổi, nếu pít-tông không dịch chuyển.", "giảm do khối khí nhận nhiệt.", "tăng, nếu pít-tông không dịch chuyển.", "tăng do khối khí nhận nhiệt."],
+        correct: 2
+    },
+    {
+        question: "Nội năng của một vật giảm đi trong trường hợp nào sau đây?",
+        options: ["Vật rắn đang nóng chảy.", "Nước đá đang tan.", "Hơi nước ngưng tụ ở nhiệt độ không đổi.", "Nước sôi ở nhiệt độ không đổi."],
+        correct: 2
+    },
+
+    // ===== FILE 3 - PHẦN I (Câu 1-21) =====
+    {
+        question: "Đơn vị của nhiệt độ trong hệ SI là",
+        options: ["K.", "°C.", "°F.", "A."],
+        correct: 0
+    },
+    {
+        question: "Dụng cụ dùng để đo nhiệt độ của vật là",
+        options: ["Cân đồng hồ.", "Nhiệt kế.", "Vôn kế.", "Tốc kế."],
+        correct: 1
+    },
+    {
+        question: "Tính chất vật lí nào sau đây không được ứng dụng để chế tạo nhiệt kế?",
+        options: ["Sự phụ thuộc của điện trở vào nhiệt độ của vật dẫn.", "Sự giãn nở của chất lỏng theo nhiệt độ.", "Sự phụ thuộc nhiệt độ vào bước sóng điện từ.", "Sự phụ thuộc nhiệt độ vào khối lượng riêng của vật."],
+        correct: 3
+    },
+    {
+        question: "Để đo nhiệt độ của môi trường ta nên dùng nhiệt kế nào?",
+        options: ["Nhiệt kế kim loại.", "Nhiệt kế rượu.", "Nhiệt kế y tế.", "Nhiệt kế thủy ngân."],
+        correct: 1
+    },
+    {
+        question: "Cho hai nhiệt kế rượu và thủy ngân. Biết rằng tại áp suất tiêu chuẩn, nhiệt độ sôi của rượu và thủy ngân lần lượt là 80 °C và 357 °C. Dùng nhiệt kế nào có thể đo được nhiệt độ của nước đang sôi ở áp suất tiêu chuẩn?",
+        options: ["Cả nhiệt kế thủy ngân và nhiệt kế rượu.", "Không thể dùng nhiệt kế thủy ngân và nhiệt kế rượu.", "Nhiệt kế rượu.", "Nhiệt kế thủy ngân."],
+        correct: 3
+    },
+    {
+        question: "Cách xác định nhiệt độ trong thang nhiệt độ Celsius ở áp suất tiêu chuẩn là",
+        options: ["lấy nhiệt độ của nước khi đông bằng (10°C) và khi sôi (100°C) làm chuẩn.", "lấy nhiệt độ của nước tinh khiết khi đông bằng (10°C) và khi sôi (0°C) làm chuẩn.", "lấy nhiệt độ của nước tinh khiết khi đông bằng (0°C) và khi sôi (100°C) làm chuẩn.", "lấy nhiệt độ của nước tinh khiết khi đông bằng (100°C) và khi sôi (0°C) làm chuẩn."],
+        correct: 2
+    },
+    {
+        question: "Mối liên hệ giữa nhiệt độ đo theo thang nhiệt độ Celsius và nhiệt độ đo theo thang nhiệt độ Kelvin là",
+        options: ["T(K) = t(°C)/273,15.", "t(°C) = T(K) - 273,15.", "t(°C) = T(K)/273,15.", "T(K) = t(°C) - 273,15."],
+        correct: 1
+    },
+    {
+        question: "Nhiệt độ vào một ngày mùa hè ở Hà Nội là 35 °C. Trong thang nhiệt độ Fahrenheit thì nhiệt độ này tương ứng với",
+        options: ["59 °F.", "67 °F.", "95 °F.", "76 °F."],
+        correct: 2
+    },
+    {
+        question: "Giá trị nhiệt độ đo được theo thang nhiệt độ Kelvin là 293 K. Theo thang nhiệt độ Fahrenheit, nhiệt độ đó có giá trị là bao nhiêu?",
+        options: ["20 °F.", "100 °F.", "68 °F.", "261 °F."],
+        correct: 2
+    },
+    {
+        question: "Nhiệt độ 104 °F tương đương với bao nhiêu K?",
+        options: ["313 K.", "298 K.", "328 K.", "293 K."],
+        correct: 0
+    },
+    {
+        question: "Khi nhiệt độ của một vật tăng thêm 1 °C thì trong thang nhiệt độ Kelvin, độ tăng nhiệt độ ấy ứng với",
+        options: ["1 K.", "274 K.", "273 K.", "100 K."],
+        correct: 0
+    },
+    {
+        question: "Vào những ngày cuối tháng 5 năm 2026, Hà Nội rơi vào một mùa khí hậu oi bức với nhiệt độ khoảng 34 °C vào ban ngày, và khoảng 26 °C vào ban đêm. Độ chênh lệch nhiệt độ giữa ban ngày và ban đêm là",
+        options: ["8 K.", "281 K.", "60 K.", "333 K."],
+        correct: 0
+    },
+    {
+        question: "Phát biểu nào dưới đây là sai khi nói về nhiệt độ?",
+        options: ["Nhiệt độ là đại lượng dùng để mô tả mức độ nóng, lạnh của vật.", "Nhiệt độ của một vật phụ thuộc vào tốc độ chuyển động của các phân tử cấu tạo nên vật.", "Nhiệt độ cho biết trạng thái cân bằng nhiệt của các vật tiếp xúc với nhau và chiều truyền nhiệt năng.", "Nhiệt độ của một vật là số đo nội năng của vật đó."],
+        correct: 3
+    },
+    {
+        question: "Số chỉ nhiệt độ của một vật khi ở trạng thái cân bằng nhiệt tính theo thang nhiệt độ Celsius so với nhiệt độ của vật đó tính theo thang nhiệt độ Kelvin sẽ",
+        options: ["thấp hơn chính xác là 273,15 độ.", "cao hơn chính xác là 273,15 độ.", "thấp hơn chính xác là 273,16 độ.", "cao hơn chính xác là 273,16 độ."],
+        correct: 0
+    },
+    {
+        question: "Cho hai vật A và B làm bằng cùng một loại vật liệu tiếp xúc với nhau. Điều kiện để xảy ra sự truyền năng lượng nhiệt từ vật A sang vật B là",
+        options: ["nội năng của vật A lớn hơn nội năng của vật B.", "nhiệt độ của vật A lớn hơn nhiệt độ của vật B.", "tốc độ trung bình của các phân tử cấu tạo nên hai vật bằng nhau.", "nhiệt lượng chứa trong vật A lớn hơn nhiệt lượng chứa trong vật B."],
+        correct: 1
+    },
+    {
+        question: "Khi hai vật có nhiệt độ khác nhau tiếp xúc với nhau thì năng lượng nhiệt sẽ truyền một cách tự phát từ",
+        options: ["vật có thể tích lớn hơn sang vật có thể tích nhỏ hơn.", "vật có nhiệt độ cao hơn sang vật có nhiệt độ thấp hơn.", "vật có khối lượng lớn hơn sang vật có khối lượng nhỏ hơn.", "vật có khối lượng riêng lớn hơn sang vật có khối lượng riêng nhỏ hơn."],
+        correct: 1
+    },
+    {
+        question: "Hai vật ở trạng thái cân bằng nhiệt thì",
+        options: ["chúng nhất thiết phải ở cùng một nhiệt độ.", "chúng nhất thiết phải chứa cùng một lượng nhiệt.", "chúng nhất thiết phải có cùng khối lượng.", "chúng nhất thiết phải được cấu tạo từ cùng một chất."],
+        correct: 0
+    },
+    {
+        question: "Các vật không thể có nhiệt độ thấp hơn",
+        options: ["5 °C.", "100 °C.", "-273,15 °C.", "-100 °C."],
+        correct: 2
+    },
+    {
+        question: "Ở độ không tuyệt đối, động năng chuyển động nhiệt của các phân tử",
+        options: ["bằng không.", "đạt giá trị cực đại.", "đạt giá trị cực tiểu.", "có giá trị khác không."],
+        correct: 0
+    },
+    {
+        question: "Ở độ không tuyệt đối, một vật có",
+        options: ["thế năng tương tác phân tử đạt giá trị tối thiểu.", "động năng chuyển động phân tử đạt cực đại.", "nội năng bằng không.", "nội năng đạt cực đại."],
+        correct: 0
+    },
+    {
+        question: "Trong thang nhiệt độ Kelvin, mỗi độ chia (1 K) có độ lớn bằng 1/x lần khoảng cách giữa nhiệt độ không tuyệt đối và nhiệt độ mà nước tinh khiết tồn tại đồng thời ở thể rắn, lỏng và hơi. Giá trị của x là",
+        options: ["273,00.", "273,15.", "273,16.", "100,00."],
+        correct: 2
+    }
+];
+
+        let quizData = [];
+        let currentIndex = 0;
+        let totalQuestions = 0;
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function prepareQuiz() {
+            const shuffledRaw = shuffleArray(rawQuestions);
+            quizData = shuffledRaw.map(item => {
+                const originalOptions = item.options;
+                const correctAnswerText = originalOptions[item.correct];
+                const shuffledOptions = shuffleArray(originalOptions);
+                const newCorrectIndex = shuffledOptions.indexOf(correctAnswerText);
+
+                return {
+                    question: item.question,
+                    options: shuffledOptions,
+                    correct: newCorrectIndex
+                };
+            });
+
+            currentIndex = 0;
+            totalQuestions = quizData.length;
+        }
+
+        function startQuiz() {
+            prepareQuiz();
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= totalQuestions) {
+                showResult();
+                return;
+            }
+
+            const q = quizData[currentIndex];
+            const questionEl = document.getElementById('question-text');
+            const optionsEl = document.getElementById('options-container');
+
+            questionEl.classList.remove('animate__fadeIn');
+            void questionEl.offsetWidth; 
+            questionEl.classList.add('animate__fadeIn');
+            questionEl.innerText = `Câu ${currentIndex + 1}: ${q.question}`;
+
+            optionsEl.innerHTML = '';
+            const optionLabels = ['A', 'B', 'C', 'D'];
+
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn glass-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white drop-shadow transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] shadow-sm animate__animated animate__fadeInUp";
+                btn.style.animationDelay = `${idx * 0.05}s`;
+                btn.innerHTML = `<span class="font-bold uppercase mr-3 text-cyan-300 text-lg md:text-xl">${optionLabels[idx]}.</span> ${optText}`;
+                
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const rect = btn.getBoundingClientRect();
+                    selectAnswer(idx, btn, rect.left + rect.width / 2, rect.top + rect.height / 2);
+                };
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(selectedIndex, btnElement, btnX, btnY) {
+            const currentQ = quizData[currentIndex];
+            const allButtons = document.querySelectorAll('.option-btn');
+
+            if (selectedIndex === currentQ.correct) {
+                sfx.playCorrect();
+                createFireworks(btnX, btnY);
+                btnElement.className = "option-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white shadow-sm bg-cyan-600/80 border-cyan-400 backdrop-blur-md animate__animated animate__pulse";
+
+                allButtons.forEach(btn => btn.disabled = true);
+
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 900);
+
+            } else {
+                sfx.playWrong();
+                btnElement.className = "option-btn w-full text-left p-4 md:p-5 rounded-2xl font-medium text-base md:text-lg text-white shadow-sm bg-red-600/80 border-red-400 backdrop-blur-md animate__animated animate__shakeX";
+                btnElement.style.animationDuration = '0.6s';
+                btnElement.disabled = true; 
+            }
+        }
+
+        function showResult() {
+            sfx.playVictory();
+            createFireworks(window.innerWidth / 2, window.innerHeight / 2);
+
+            document.getElementById('quiz-container').classList.add('hidden');
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.classList.remove('hidden');
+        }
+
+        function restartQuiz() {
+            sfx.playClick();
+            startQuiz();
+        }
+
+        startQuiz();
+    </script>
+</body>
+</html>
